@@ -1,6 +1,6 @@
 # Decisiones de implementación para validar — Proceso productivo de leche de PIL Andina
 
-6 de octubre de 2026
+21 de octubre de 2026
 
 > Copia en el repositorio del documento compartido con el subgrupo de análisis. Las validaciones se registran en el documento compartido; al aplicar los cambios se actualiza también esta copia.
 
