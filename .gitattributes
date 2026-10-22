@@ -1,0 +1,13 @@
+# Normaliza los saltos de línea: LF en el repositorio y en la copia de trabajo
+* text=auto eol=lf
+
+# Binarios: sin conversión
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.ico  binary
+*.pdf  binary
+*.docx binary
+*.xlsx binary
+*.zip  binary
+*.db   binary
