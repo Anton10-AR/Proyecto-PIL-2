@@ -170,4 +170,4 @@ Estas decisiones se tomaron antes de implementar y no requieren validación; se 
 - [ ] El equipo de desarrollo aplica los cambios marcados como "Cambiar".
 - [ ] Revisión conjunta del sistema con los usuarios de prueba.
 
-El código está en la rama `main` del repositorio `Anton10-AR/Proyecto-PIL`. Las instrucciones para levantarlo y los usuarios de prueba de cada rol están en el README de la raíz.
+El código está en la rama `main` del repositorio `Anton10-AR/Proyecto-PIL-2` (https://github.com/Anton10-AR/Proyecto-PIL-2). Las instrucciones para levantarlo y los usuarios de prueba de cada rol están en el README de la raíz.
