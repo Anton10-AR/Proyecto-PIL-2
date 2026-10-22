@@ -1,4 +1,4 @@
-# Decisiones de implementación para validar — Sistema de RR.HH. PIL Andina
+# Decisiones de implementación para validar — Proceso productivo de leche de PIL Andina
 
 6 de octubre de 2026
 
@@ -6,7 +6,9 @@
 
 ## Propósito
 
-El sistema ya implementa los 6 módulos y los 4 roles del documento *10-02-Proyecto_RRHH_PIL_Andina*. Para hacerlo, el equipo de desarrollo tomó **15 decisiones** que el documento no definía; necesitamos que el subgrupo de análisis las confirme o las corrija.
+El sistema se orienta al proceso productivo de leche líquida (documento *PIL-ANDINA-final-v2*): recepción y control de calidad de la leche cruda y cobertura de los puestos críticos de cada etapa. Los módulos de RRHH (personal, asistencia y turnos, permisos y vacaciones, capacitación e indicadores de personal) son el soporte organizacional de ese proceso.
+
+Esas reglas de RRHH vienen de la versión anterior, basada en el documento *10-02-Proyecto_RRHH_PIL_Andina*. Para implementarlas, el equipo de desarrollo tomó **15 decisiones** que el documento no definía; necesitamos que el subgrupo de análisis las confirme o las corrija. Las decisiones D10 a D15 (Evaluación del desempeño y Clima y comunicación) corresponden a módulos que quedan fuera del alcance de esta versión: se validarán cuando esos módulos se incorporen.
 
 Cómo responder: marque cada decisión en la columna **Validación** de la tabla resumen y deje un comentario sobre la decisión que quiera cambiar, indicando el valor o la regla correcta. Las decisiones de prioridad **Alta** afectan cálculos o normativa y conviene revisarlas primero.
 
