@@ -1,0 +1,176 @@
+/* Identidad visual: paleta "Leche y cielo", modo oscuro y opciones de accesibilidad.
+   App.css usa solo estas variables; los atributos data-* de <html> los pone utils/preferencias.js. */
+
+:root {
+  color-scheme: light;
+  --fondo: #f7f5f0;
+  --superficie: #ffffff;
+  --superficie-2: #fbfaf7;
+  --superficie-3: #f1efe9;
+  --borde: #e4e1d9;
+  --borde-fuerte: #cfcbc1;
+  --texto: #1d2633;
+  --texto-2: #3a4452;
+  --texto-suave: #5b6573;
+  --texto-tenue: #8a929e;
+  --cabecera: #12355b;
+  --sobre-cabecera: #ffffff;
+  --sobre-cabecera-suave: #c7dcf0;
+  --titulo: #12355b;
+  --primario: #1f6fb2;
+  --primario-hover: #185a92;
+  --sobre-primario: #ffffff;
+  --enlace: #185a92;
+  --primario-claro: #eaf2fa;
+  --primario-borde: #bcd5ec;
+  --foco: #7fb0de;
+  --acento: #c2410c;
+  --info-fondo: #dbeafe;
+  --info-texto: #1e40af;
+  --celeste-fondo: #e0f2fe;
+  --celeste-texto: #075985;
+  --indigo-fondo: #e0e7ff;
+  --indigo-texto: #3730a3;
+  --violeta-fondo: #f3e8ff;
+  --violeta-texto: #6b21a8;
+  --naranja-fondo: #fff7ed;
+  --naranja-texto: #9a3412;
+  --peligro: #dc2626;
+  --peligro-hover: #b91c1c;
+  --sobre-peligro: #ffffff;
+  --texto-peligro: #b91c1c;
+  --peligro-fondo: #fee2e2;
+  --peligro-texto: #7f1d1d;
+  --aviso-fondo: #fef3c7;
+  --aviso-fondo-2: #fffbeb;
+  --aviso-texto: #78350f;
+  --aviso-borde: #f59e0b;
+  --texto-alerta: #b45309;
+  --ok-fondo: #dcfce7;
+  --ok-fondo-2: #f0fdf4;
+  --ok-texto: #14532d;
+  --texto-ok: #15803d;
+  --ok-borde: #16a34a;
+  --sombra: rgba(0, 0, 0, 0.1);
+  --sombra-fuerte: rgba(0, 0, 0, 0.14);
+  --grosor-borde: 1px;
+}
+
+:root[data-tema="oscuro"] {
+  color-scheme: dark;
+  --fondo: #121417;
+  --superficie: #1c1f24;
+  --superficie-2: #20242a;
+  --superficie-3: #272b32;
+  --borde: #2c3038;
+  --borde-fuerte: #3f444d;
+  --texto: #e8eaed;
+  --texto-2: #cfd3d9;
+  --texto-suave: #b4b8bf;
+  --texto-tenue: #8b9099;
+  --cabecera: #0f1b3d;
+  --sobre-cabecera-suave: #a9c4ea;
+  --titulo: #a9cbf7;
+  --primario: #7cb3f5;
+  --primario-hover: #a3c9f8;
+  --sobre-primario: #0b1220;
+  --enlace: #93c5fd;
+  --primario-claro: #1a2a40;
+  --primario-borde: #2b4566;
+  --foco: #4f8fd6;
+  --acento: #f97316;
+  --info-fondo: #1a2a40;
+  --info-texto: #bfdbfe;
+  --celeste-fondo: #0c3346;
+  --celeste-texto: #bae6fd;
+  --indigo-fondo: #23264f;
+  --indigo-texto: #c7d2fe;
+  --violeta-fondo: #3b1d4f;
+  --violeta-texto: #e9d5ff;
+  --naranja-fondo: #3d1f0c;
+  --naranja-texto: #fed7aa;
+  --texto-peligro: #fca5a5;
+  --peligro-fondo: #4a1515;
+  --peligro-texto: #fecaca;
+  --aviso-fondo: #3f2d0b;
+  --aviso-fondo-2: #2a2110;
+  --aviso-texto: #fde68a;
+  --texto-alerta: #fbbf24;
+  --ok-fondo: #123d26;
+  --ok-fondo-2: #0f2a1c;
+  --ok-texto: #bbf7d0;
+  --texto-ok: #4ade80;
+  --ok-borde: #22c55e;
+  --sombra: rgba(0, 0, 0, 0.4);
+  --sombra-fuerte: rgba(0, 0, 0, 0.55);
+}
+
+/* Alto contraste: textos y bordes al máximo, sin grises intermedios */
+:root[data-contraste="alto"] {
+  --fondo: #ffffff;
+  --superficie: #ffffff;
+  --superficie-2: #ffffff;
+  --superficie-3: #ededed;
+  --borde: #000000;
+  --borde-fuerte: #000000;
+  --texto: #000000;
+  --texto-2: #000000;
+  --texto-suave: #000000;
+  --texto-tenue: #333333;
+  --cabecera: #000000;
+  --sobre-cabecera-suave: #ffffff;
+  --titulo: #000000;
+  --primario: #0b2d73;
+  --primario-hover: #061a45;
+  --enlace: #0b2d73;
+  --primario-claro: #e6ecf8;
+  --primario-borde: #000000;
+  --grosor-borde: 2px;
+}
+
+:root[data-tema="oscuro"][data-contraste="alto"] {
+  --fondo: #000000;
+  --superficie: #000000;
+  --superficie-2: #000000;
+  --superficie-3: #1a1a1a;
+  --borde: #ffffff;
+  --borde-fuerte: #ffffff;
+  --texto: #ffffff;
+  --texto-2: #ffffff;
+  --texto-suave: #ffffff;
+  --texto-tenue: #dddddd;
+  --cabecera: #000000;
+  --titulo: #ffffff;
+  --primario: #ffd60a;
+  --primario-hover: #ffe55c;
+  --sobre-primario: #000000;
+  --enlace: #ffd60a;
+  --primario-claro: #262000;
+  --primario-borde: #ffffff;
+}
+
+/* Tamaño del texto: todo el CSS usa rem, así que basta con escalar la raíz */
+:root[data-texto="grande"] { font-size: 115%; }
+:root[data-texto="muy-grande"] { font-size: 130%; }
+
+/* Subrayar enlaces del contenido (el menú lateral se distingue por su posición) */
+:root[data-subrayar="si"] .contenido a:not(.boton-primario),
+:root[data-subrayar="si"] .tarjeta-login a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Foco visible con el color de acento, para quien navega con teclado */
+:focus-visible {
+  outline: 3px solid var(--acento);
+  outline-offset: 2px;
+}
+
+/* Reducir animaciones: por elección del usuario o del sistema operativo */
+:root[data-movimiento="reducido"] *,
+:root[data-movimiento="reducido"] *::before,
+:root[data-movimiento="reducido"] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}

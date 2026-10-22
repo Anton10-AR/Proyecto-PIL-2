@@ -1,0 +1,25 @@
+# Dependencias
+node_modules/
+
+# Base de datos SQLite generada (se recrea con node src/server.js o npm run seed)
+*.db
+*.db-journal
+
+# Logs
+*.log
+npm-debug.log*
+
+# Build
+dist/
+dist-ssr/
+
+# Editor / SO
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.local
+
+# Archivos subidos y respaldos generados por el backend
+pil-backend/uploads/
+pil-backend/respaldos/

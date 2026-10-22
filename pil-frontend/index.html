@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RR.HH. — PIL Andina</title>
+    <script>
+      // Aplica tema, tamaño de texto y contraste antes de pintar, para evitar el parpadeo.
+      // Debe coincidir con aplicarPreferencias() de src/preferencias.js.
+      (function () {
+        var p = {};
+        try { p = JSON.parse(localStorage.getItem("pil-preferencias")) || {}; } catch (e) { p = {}; }
+        var tema = p.tema || "sistema";
+        if (tema === "sistema") tema = matchMedia("(prefers-color-scheme: dark)").matches ? "oscuro" : "claro";
+        var raiz = document.documentElement;
+        raiz.dataset.tema = tema;
+        raiz.dataset.texto = p.texto || "normal";
+        raiz.dataset.contraste = p.contraste ? "alto" : "normal";
+        raiz.dataset.subrayar = p.subrayar === false ? "no" : "si";
+        raiz.dataset.movimiento = p.reducirMovimiento || matchMedia("(prefers-reduced-motion: reduce)").matches ? "reducido" : "normal";
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
