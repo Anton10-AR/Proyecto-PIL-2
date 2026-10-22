@@ -27,12 +27,12 @@ Tres decisiones tienen prioridad alta porque afectan cálculos que ven los traba
 | D7 | Fecha de inicio de registros para los indicadores | Reportes | Media | Pendiente |
 | D8 | Días sin marcación ni ausencia se informan aparte | Reportes | Alta | Pendiente |
 | D9 | El supervisor propone participantes; RRHH confirma | Capacitación | Media | Pendiente |
-| D10 | Cada evaluación guarda su propia plantilla | Evaluación | Baja | Pendiente |
-| D11 | Umbrales de las categorías del puntaje | Evaluación | Media | Pendiente |
-| D12 | Quién puede evaluar y cuándo se ve la evaluación | Evaluación | Baja | Pendiente |
-| D13 | Código de seguimiento para sugerencias anónimas | Clima y comunicación | Baja | Pendiente |
-| D14 | Solo RRHH responde sugerencias | Clima y comunicación | Baja | Pendiente |
-| D15 | Mínimo de 3 respuestas para mostrar resultados | Clima y comunicación | Media | Pendiente |
+| D10 | Cada evaluación guarda su propia plantilla | Evaluación | Baja | Fuera de alcance |
+| D11 | Umbrales de las categorías del puntaje | Evaluación | Media | Fuera de alcance |
+| D12 | Quién puede evaluar y cuándo se ve la evaluación | Evaluación | Baja | Fuera de alcance |
+| D13 | Código de seguimiento para sugerencias anónimas | Clima y comunicación | Baja | Fuera de alcance |
+| D14 | Solo RRHH responde sugerencias | Clima y comunicación | Baja | Fuera de alcance |
+| D15 | Mínimo de 3 respuestas para mostrar resultados | Clima y comunicación | Media | Fuera de alcance |
 
 ## Permisos y vacaciones
 
