@@ -2,7 +2,7 @@
 const express = require("express");
 const db = require("../db/database");
 const { autenticar } = require("../middleware/auth");
-const { permisosRecepcion, puedeVerCobertura } = require("../utils/puestos");
+const { permisosRecepcion, permisosAlmacen, puedeVerCobertura } = require("../utils/puestos");
 const { verificarClave, hashearClave, generarToken, hashToken, validarNuevaClave } = require("../utils/claves");
 
 const router = express.Router();
@@ -59,11 +59,12 @@ router.get("/yo", autenticar, (req, res) => {
     apellido: u.apellido,
     area: u.area,
     cargo: u.cargo,
-    // Puesto en el proceso productivo: define los permisos en Recepción y calidad
+    // Puesto en el proceso productivo: define los permisos en Recepción y en Almacén y despacho
     puesto: u.puesto,
     nombre_puesto: u.nombre_puesto,
     id_etapa: u.id_etapa,
     permisos_recepcion: permisosRecepcion(u),
+    permisos_almacen: permisosAlmacen(u),
     ve_proceso: puedeVerCobertura(u),
     debe_cambiar_clave: !!u.debe_cambiar_clave
   });

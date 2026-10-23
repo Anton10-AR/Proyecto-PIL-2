@@ -1,6 +1,8 @@
 const { test } = require("node:test");
 const assert = require("node:assert");
-const { fechaVencimiento, estaVencido, proponerFEFO, coincideConPropuesta } = require("../src/utils/inventario");
+const {
+  fechaVencimiento, estaVencido, diasParaVencer, porVencer, situacionLote, errorRecepcion, proponerFEFO, coincideConPropuesta
+} = require("../src/utils/inventario");
 
 const lote = (id, vencimiento, stock, extra = {}) => ({
   id, codigo: `LP-${id}`, estado: "en_almacen", fecha_elaboracion: "2026-10-01", fecha_vencimiento: vencimiento, stock, ...extra
@@ -46,4 +48,30 @@ test("coincideConPropuesta compara lotes y unidades sin importar el orden", () =
   assert.strictEqual(coincideConPropuesta(propuesta, [{ id_lote_producto: 3, cantidad: 300 }, { id_lote_producto: 2, cantidad: 300 }]), true);
   assert.strictEqual(coincideConPropuesta(propuesta, [{ id_lote_producto: 2, cantidad: 300 }, { id_lote_producto: 1, cantidad: 300 }]), false);
   assert.strictEqual(coincideConPropuesta(propuesta, [{ id_lote_producto: 2, cantidad: 200 }, { id_lote_producto: 3, cantidad: 400 }]), false);
+});
+
+test("por vencer: queda un cuarto de la vida útil o menos", () => {
+  // Pasteurizada (7 días): avisa con 2 días; UHT (120 días): con 30
+  assert.strictEqual(diasParaVencer(lote(1, "2026-10-23", 1), "2026-10-21"), 2);
+  assert.strictEqual(porVencer(lote(1, "2026-10-23", 1), "2026-10-21", 7), true);
+  assert.strictEqual(porVencer(lote(1, "2026-10-24", 1), "2026-10-21", 7), false);
+  assert.strictEqual(porVencer(lote(1, "2026-11-20", 1), "2026-10-21", 120), true);
+  assert.strictEqual(porVencer(lote(1, "2026-12-20", 1), "2026-10-21", 120), false);
+  assert.strictEqual(porVencer(lote(1, "2026-10-20", 1), "2026-10-21", 7), false); // ya vencido
+});
+
+test("la recepción en almacén exige observación si faltan unidades", () => {
+  assert.strictEqual(errorRecepcion(100, 100, ""), null);
+  assert.match(errorRecepcion(100, 90, ""), /observación/);
+  assert.strictEqual(errorRecepcion(100, 90, "Cajas aplastadas"), null);
+  assert.match(errorRecepcion(100, 101, ""), /más unidades/);
+  assert.match(errorRecepcion(100, 2.5, ""), /entero/);
+});
+
+test("situación del lote en el inventario", () => {
+  assert.strictEqual(situacionLote(lote(1, "2026-11-30", 0, { estado: "registrado" }), "2026-10-21", 120), "por_recibir");
+  assert.strictEqual(situacionLote(lote(1, "2026-11-30", 0), "2026-10-21", 120), "agotado");
+  assert.strictEqual(situacionLote(lote(1, "2026-10-20", 5), "2026-10-21", 7), "vencido");
+  assert.strictEqual(situacionLote(lote(1, "2026-10-22", 5), "2026-10-21", 7), "por_vencer");
+  assert.strictEqual(situacionLote(lote(1, "2027-02-01", 5), "2026-10-21", 120), "vigente");
 });

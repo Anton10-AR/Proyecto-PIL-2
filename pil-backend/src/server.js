@@ -27,6 +27,7 @@ const solicitudesRouter = require("./routes/solicitudes");
 const reportesRouter = require("./routes/reportes");
 const recepcionRouter = require("./routes/recepcion");
 const procesoRouter = require("./routes/proceso");
+const almacenRouter = require("./routes/almacen");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -49,6 +50,7 @@ app.use("/api/notificaciones", notificacionesRouter);
 // Proceso productivo: permisos según el puesto del trabajador en el proceso (utils/puestos.js)
 app.use("/api/proceso", procesoRouter);
 app.use("/api/recepcion", recepcionRouter);
+app.use("/api/almacen", almacenRouter);
 app.use("/api/trabajadores", trabajadoresRouter);
 app.use("/api/asistencia", asistenciaRouter);
 app.use("/api/ausencias", ausenciasRouter);

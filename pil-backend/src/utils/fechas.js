@@ -77,5 +77,5 @@ function rangoDelMes(mes) {
 
 module.exports = {
   hoyLocal, horaLocal, esFecha, esHora, esMes, minutosDelDia, calcularHoras, calcularRetraso,
-  diaSemana, sumarDias, rangoDelMes, formatearFecha
+  diaSemana, sumarDias, rangoDelMes, formatearFecha, aFechaLocal
 };

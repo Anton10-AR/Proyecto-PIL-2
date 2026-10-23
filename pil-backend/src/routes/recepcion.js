@@ -7,8 +7,9 @@ const db = require("../db/database");
 const { permitirAccion, permisosRecepcion, notificarPuestos } = require("../utils/puestos");
 const { notificarTrabajador } = require("../utils/notificar");
 const {
-  evaluarMuestra, describirLimite, codigoCorrelativo, RESULTADO_DE_SUGERENCIA, calcularIndicadoresCalidad, porcentaje
+  evaluarMuestra, describirLimite, RESULTADO_DE_SUGERENCIA, calcularIndicadoresCalidad, porcentaje
 } = require("../utils/recepcion");
+const { siguienteCodigo } = require("../utils/codigos");
 const { hoyLocal, horaLocal, esFecha, esHora, sumarDias } = require("../utils/fechas");
 
 const router = express.Router();
@@ -48,14 +49,6 @@ function obtenerIngreso(id) {
 function parametrosVigentes() {
   return db.prepare("SELECT * FROM parametros_calidad ORDER BY orden").all()
     .map((p) => ({ ...p, critico: Boolean(p.critico), limite: describirLimite(p) }));
-}
-
-// Siguiente número correlativo del día para un código (ING-, LR-): toma el mayor existente + 1
-function siguienteCodigo(tabla, columna, prefijo, fecha) {
-  const base = codigoCorrelativo(prefijo, fecha, 0).slice(0, -2);
-  const fila = db.prepare(`SELECT MAX(${columna}) AS ultimo FROM ${tabla} WHERE ${columna} LIKE ?`).get(`${base}%`);
-  const numero = fila.ultimo ? Number(fila.ultimo.slice(base.length)) + 1 : 1;
-  return codigoCorrelativo(prefijo, fecha, numero);
 }
 
 function registrarBitacora(entidad, idRegistro, campo, anterior, nuevo, motivo, idUsuario) {
