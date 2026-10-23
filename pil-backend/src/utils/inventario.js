@@ -64,6 +64,29 @@ function proponerFEFO(lotes, cantidad, fecha) {
   return { asignacion, faltante: restante };
 }
 
+// Valida los lotes elegidos para despachar un pedido completo. items: [{ id_producto, cantidad }];
+// elegida: [{ id_lote_producto, cantidad }]; lotes: Map id -> { id, codigo, id_producto, estado, fecha_vencimiento, stock }.
+// Devuelve un mensaje de error o null.
+function errorAsignacion(items, elegida, lotes, fecha) {
+  if (!Array.isArray(elegida) || !elegida.length) return "Indique los lotes a despachar";
+  const porLote = new Map();
+  for (const e of elegida) {
+    const lote = lotes.get(Number(e.id_lote_producto));
+    if (!lote) return "Uno de los lotes elegidos no existe";
+    if (!Number.isInteger(e.cantidad) || e.cantidad <= 0) return `La cantidad del lote ${lote.codigo} debe ser un entero mayor a 0`;
+    if (!items.some((i) => i.id_producto === lote.id_producto)) return `El lote ${lote.codigo} es de un producto que no está en el pedido`;
+    if (!despachable(lote, fecha)) return `El lote ${lote.codigo} no se puede despachar (sin recibir, vencido o sin stock)`;
+    porLote.set(lote.id, (porLote.get(lote.id) || 0) + e.cantidad);
+    if (porLote.get(lote.id) > lote.stock) return `El lote ${lote.codigo} tiene ${lote.stock} unidades`;
+  }
+  for (const item of items) {
+    const total = elegida.filter((e) => lotes.get(Number(e.id_lote_producto)).id_producto === item.id_producto)
+      .reduce((s, e) => s + e.cantidad, 0);
+    if (total !== item.cantidad) return `El pedido lleva ${item.cantidad} unidades de un producto y se eligieron ${total}`;
+  }
+  return null;
+}
+
 // ¿La asignación elegida usa los mismos lotes y unidades que la propuesta? (el orden no importa)
 function coincideConPropuesta(propuesta, elegida) {
   const aMapa = (lista) => {
@@ -78,5 +101,5 @@ function coincideConPropuesta(propuesta, elegida) {
 
 module.exports = {
   fechaVencimiento, estaVencido, diasParaVencer, porVencer, situacionLote, errorRecepcion, despachable, proponerFEFO,
-  coincideConPropuesta
+  errorAsignacion, coincideConPropuesta
 };

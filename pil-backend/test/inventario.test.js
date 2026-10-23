@@ -1,7 +1,8 @@
 const { test } = require("node:test");
 const assert = require("node:assert");
 const {
-  fechaVencimiento, estaVencido, diasParaVencer, porVencer, situacionLote, errorRecepcion, proponerFEFO, coincideConPropuesta
+  fechaVencimiento, estaVencido, diasParaVencer, porVencer, situacionLote, errorRecepcion, proponerFEFO, errorAsignacion,
+  coincideConPropuesta
 } = require("../src/utils/inventario");
 
 const lote = (id, vencimiento, stock, extra = {}) => ({
@@ -74,4 +75,22 @@ test("situación del lote en el inventario", () => {
   assert.strictEqual(situacionLote(lote(1, "2026-10-20", 5), "2026-10-21", 7), "vencido");
   assert.strictEqual(situacionLote(lote(1, "2026-10-22", 5), "2026-10-21", 7), "por_vencer");
   assert.strictEqual(situacionLote(lote(1, "2027-02-01", 5), "2026-10-21", 120), "vigente");
+});
+
+test("errorAsignacion: los lotes elegidos deben cubrir exactamente el pedido", () => {
+  const lotes = new Map([
+    [1, lote(1, "2026-11-01", 100, { id_producto: 1 })],
+    [2, lote(2, "2026-11-05", 50, { id_producto: 1 })],
+    [3, lote(3, "2027-02-01", 500, { id_producto: 2 })],
+    [4, lote(4, "2026-10-20", 80, { id_producto: 1 })]
+  ]);
+  const items = [{ id_producto: 1, cantidad: 120 }, { id_producto: 2, cantidad: 30 }];
+  const ok = [{ id_lote_producto: 1, cantidad: 100 }, { id_lote_producto: 2, cantidad: 20 }, { id_lote_producto: 3, cantidad: 30 }];
+  assert.strictEqual(errorAsignacion(items, ok, lotes, "2026-10-21"), null);
+  assert.match(errorAsignacion(items, [], lotes, "2026-10-21"), /Indique/);
+  assert.match(errorAsignacion(items, [{ id_lote_producto: 1, cantidad: 100 }, { id_lote_producto: 3, cantidad: 30 }], lotes, "2026-10-21"), /se eligieron 100/);
+  assert.match(errorAsignacion(items, [{ id_lote_producto: 2, cantidad: 120 }, { id_lote_producto: 3, cantidad: 30 }], lotes, "2026-10-21"), /tiene 50/);
+  assert.match(errorAsignacion(items, [{ id_lote_producto: 4, cantidad: 80 }, { id_lote_producto: 2, cantidad: 40 }, { id_lote_producto: 3, cantidad: 30 }], lotes, "2026-10-21"), /no se puede despachar/);
+  assert.match(errorAsignacion([{ id_producto: 2, cantidad: 30 }], ok, lotes, "2026-10-21"), /no está en el pedido/);
+  assert.match(errorAsignacion(items, [{ id_lote_producto: 9, cantidad: 1 }], lotes, "2026-10-21"), /no existe/);
 });
