@@ -60,6 +60,10 @@ Todas las rutas, salvo `POST /api/auth/login`, requieren la cabecera `Authorizat
 |---------|-------------------|
 | `/api/auth` | `POST /login`, `POST /logout`, `GET /yo`, `PUT /clave` |
 | `/api/notificaciones` | `GET /`, `PUT /leidas`, `PUT /:id/leida` |
+| `/api/proceso` | `GET /etapas`, `GET /impacto-solicitud/:id`; `GET /cobertura?fecha`, `GET /indicadores` (supervisores, RRHH, Gerencia y puestos que consultan recepción) |
+| `/api/recepcion` | Por puesto (`PUESTOS_POR_ACCION`): `GET /permisos`, `/catalogos`, `/ingresos`, `/ingresos/:id`, `/trazabilidad/:codigo` (LR-, ING-), `/indicadores`, `/parametros/bitacora`; `POST\|PUT /ingresos` (registrar), `POST\|PUT /ingresos/:id/analisis` (analizar), `POST /ingresos/:id/decision` (decidir), `POST /ingresos/:id/descarga` (registrar); proveedores, cisternas y `PUT /parametros/:codigo` (administrar) |
+| `/api/almacen` | Por puesto (`PUESTOS_ALMACEN`): `GET /permisos`, `/catalogos`, `/origenes`, `/lotes`, `/lotes/:id`, `/inventario`, `/movimientos`, `/trazabilidad/:codigo` (LP-), `/indicadores`; `POST /lotes` (envasar), `POST /lotes/:id/recepcion` y `/ajustes` (recibir); `POST\|PUT /productos` (productos), `POST\|PUT /clientes` (clientes) |
+| `/api/pedidos` | Por puesto (`PUESTOS_ALMACEN`): `GET /`, `GET /:id` (con propuesta FEFO); `POST /`, `POST /:id/cancelar` (pedir); `POST /:id/despacho` (despachar); `POST /:id/devoluciones` (devolver) |
 | `/api/trabajadores` | `GET /`, `GET /opciones`, `GET /:id` (ficha con historial); `POST`, `PUT /:id`, `DELETE /:id`, `POST\|PUT /:id/cuenta`, `POST /:id/cuenta/restablecer-clave` (RRHH) |
 | `/api/turnos` | `GET /`, `GET /vigentes`, `GET /asignaciones`; `POST`, `PUT /:id`, `POST /asignaciones` (RRHH) |
 | `/api/feriados`, `/api/configuracion` | `GET`; altas, bajas y cambios (RRHH) |

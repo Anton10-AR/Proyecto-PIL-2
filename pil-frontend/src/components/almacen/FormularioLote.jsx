@@ -45,7 +45,7 @@ export default function FormularioLote() {
   }
 
   return (
-    <div className="pagina-angosta">
+    <div>
       <div className="encabezado-pagina">
         <h2>Registrar lote envasado</h2>
         <Link to="/almacen/lotes">Volver</Link>

@@ -1,5 +1,6 @@
 // Estructura del proceso: las 7 etapas con sus puestos (críticos y no críticos) y cuántas personas ocupan
-// cada uno, más la matriz de responsabilidades de la recepción (documento, secciones 5, 7.3 y 7.4).
+// cada uno, más las matrices de responsabilidades de la recepción y del almacén y despacho (documento,
+// secciones 5, 7.3 y 7.4).
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { obtenerEtapas } from "../../api/proceso";
@@ -20,6 +21,38 @@ const RACI = {
     ["Rastrear un lote ante reclamo", "I", "C", "R", "C", "A"]
   ]
 };
+
+// Matriz RACI de envasado, almacén y despacho (etapas 6 y 7). La aplican los permisos de Almacén y despacho
+// (PUESTOS_ALMACEN en el backend): quien envasa no recibe y quien registra el pedido no lo despacha.
+const RACI_ALMACEN = {
+  columnas: ["Op. envasado", "Sup. producción", "Enc. almacén", "Aux. despacho", "At. pedidos", "Sup. calidad", "Jefatura"],
+  filas: [
+    ["Registrar lote envasado con su leche de origen", "R", "A", "I", "", "", "", ""],
+    ["Recibir el lote en almacén y confirmar unidades", "I", "I", "A/R", "", "", "", ""],
+    ["Ajustar stock (merma, vencidos)", "", "I", "A/R", "", "", "", "I"],
+    ["Registrar y cancelar pedidos", "", "", "I", "I", "A/R", "", ""],
+    ["Despachar por lote (FEFO)", "", "", "A/R", "R", "I", "", ""],
+    ["Registrar devoluciones", "", "", "A/R", "", "", "I", "I"],
+    ["Mantener productos y vida útil", "", "A/R", "", "", "", "C", ""],
+    ["Mantener clientes", "", "", "", "", "A/R", "", ""],
+    ["Rastrear un lote hasta el cliente", "", "C", "C", "", "C", "R", "A"]
+  ]
+};
+
+function TablaRaci({ matriz }) {
+  return (
+    <div className="tabla-contenedor">
+      <table>
+        <thead><tr><th>Actividad</th>{matriz.columnas.map((c) => <th key={c}>{c}</th>)}</tr></thead>
+        <tbody>
+          {matriz.filas.map(([actividad, ...valores]) => (
+            <tr key={actividad}><td>{actividad}</td>{valores.map((v, i) => <td key={i}><strong>{v}</strong></td>)}</tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 export default function EstructuraProceso() {
   const [datos, setDatos] = useState(null);
@@ -75,16 +108,14 @@ export default function EstructuraProceso() {
         <h3>Matriz de responsabilidades de la recepción (RACI)</h3>
         <p className="ayuda"><strong>R</strong> = realiza · <strong>A</strong> = aprueba y rinde cuentas · <strong>C</strong> = es consultado · <strong>I</strong> = es informado.
           El sistema aplica esta matriz: cada acción de Recepción solo la registra el puesto responsable, y quien analiza una muestra no puede decidir sobre ella.</p>
-        <div className="tabla-contenedor">
-          <table>
-            <thead><tr><th>Actividad</th>{RACI.columnas.map((c) => <th key={c}>{c}</th>)}</tr></thead>
-            <tbody>
-              {RACI.filas.map(([actividad, ...valores]) => (
-                <tr key={actividad}><td>{actividad}</td>{valores.map((v, i) => <td key={i}><strong>{v}</strong></td>)}</tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <TablaRaci matriz={RACI} />
+      </section>
+
+      <section className="bloque">
+        <h3>Matriz de responsabilidades de envasado, almacén y despacho (RACI)</h3>
+        <p className="ayuda">Etapas 6 y 7. El sistema la aplica igual que en la recepción: quien registra el lote en envasado no lo recibe en
+          almacén, y quien registra un pedido no lo despacha. Apartarse de FEFO al despachar exige motivo.</p>
+        <TablaRaci matriz={RACI_ALMACEN} />
       </section>
     </div>
   );
