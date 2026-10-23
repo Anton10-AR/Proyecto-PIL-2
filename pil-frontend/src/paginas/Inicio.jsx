@@ -1,11 +1,13 @@
 // Inicio: lo pendiente para el puesto del usuario en el proceso (muestras por analizar, decisiones,
-// descargas) y, para quien supervisa, la cobertura de puestos críticos del día.
+// descargas, lotes por recibir, pedidos por despachar) y, para quien supervisa, la cobertura del día.
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { useAuth } from "../contexto/useAuth";
 import { menuDelUsuario } from "../navegacion";
 import { NOMBRES_ROL } from "../roles";
 import { listarIngresos } from "../api/recepcion";
+import { listarLotes } from "../api/almacen";
+import { listarPedidos } from "../api/pedidos";
 import { obtenerCobertura } from "../api/proceso";
 import { ESTADOS_COBERTURA } from "../formato";
 
@@ -21,7 +23,9 @@ function Pendiente({ cantidad, texto, enlace }) {
 export default function Inicio() {
   const { usuario } = useAuth();
   const permisos = usuario.permisos_recepcion || {};
+  const permisosAlmacen = usuario.permisos_almacen || {};
   const [pendientes, setPendientes] = useState(null);
+  const [almacen, setAlmacen] = useState(null);
   const [cobertura, setCobertura] = useState(null);
   const [mensaje, setMensaje] = useState("");
 
@@ -37,6 +41,17 @@ export default function Inicio() {
   }, [permisos.consultar]);
 
   useEffect(() => {
+    if (!permisosAlmacen.consultar) return;
+    Promise.all([listarLotes({ estado: "registrado" }), listarPedidos({ estado: "pendiente" })])
+      .then(([lotes, pedidos]) => setAlmacen({
+        lotes: lotes.length,
+        pedidos: pedidos.length,
+        atrasados: pedidos.filter((p) => p.atrasado).length
+      }))
+      .catch((err) => setMensaje(err.message));
+  }, [permisosAlmacen.consultar]);
+
+  useEffect(() => {
     if (!usuario.ve_proceso) return;
     obtenerCobertura().then(setCobertura).catch((err) => setMensaje(err.message));
   }, [usuario.ve_proceso]);
@@ -47,6 +62,12 @@ export default function Inicio() {
     permisos.decidir && { cantidad: pendientes.decision, texto: "Ingresos esperando su decisión", enlace: "/recepcion" },
     permisos.registrar && { cantidad: pendientes.descarga, texto: "Descargas a tanque por registrar", enlace: "/recepcion" },
     !permisos.analizar && !permisos.decidir && { cantidad: pendientes.analisis + pendientes.decision, texto: "Ingresos de leche en curso", enlace: "/recepcion" }
+  ].filter(Boolean) : [];
+  const tarjetasAlmacen = almacen ? [
+    permisosAlmacen.recibir ? { cantidad: almacen.lotes, texto: "Lotes por recibir en almacén", enlace: "/almacen/lotes" }
+      : { cantidad: almacen.lotes, texto: "Lotes envasados esperando al almacén", enlace: "/almacen/lotes" },
+    { cantidad: almacen.pedidos, texto: permisosAlmacen.despachar ? "Pedidos por despachar" : "Pedidos pendientes", enlace: "/pedidos" },
+    almacen.atrasados > 0 && { cantidad: almacen.atrasados, texto: "Pedidos con la entrega atrasada", enlace: "/pedidos" }
   ].filter(Boolean) : [];
 
   return (
@@ -63,6 +84,15 @@ export default function Inicio() {
           <h3>Recepción de leche</h3>
           <div className="tarjetas tarjetas-indicadores">
             {tarjetasPendientes.map((t) => <Pendiente key={t.texto} {...t} />)}
+          </div>
+        </section>
+      )}
+
+      {tarjetasAlmacen.length > 0 && (
+        <section>
+          <h3>Almacén y despacho</h3>
+          <div className="tarjetas tarjetas-indicadores">
+            {tarjetasAlmacen.map((t) => <Pendiente key={t.texto} {...t} />)}
           </div>
         </section>
       )}

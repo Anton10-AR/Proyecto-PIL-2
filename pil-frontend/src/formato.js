@@ -168,3 +168,40 @@ export function decimal(n) {
   if (n === null || n === undefined || n === "") return "—";
   return String(n).replace(".", ",");
 }
+
+// --- Proceso productivo: almacén y despacho ---
+
+// Situación de un lote de producto terminado (la calcula el backend)
+export const SITUACIONES_LOTE = {
+  por_recibir: { texto: "Por recibir", clase: "insignia-pendiente" },
+  vigente: { texto: "Vigente", clase: "insignia-activo" },
+  por_vencer: { texto: "Por vencer", clase: "insignia-derivado" },
+  vencido: { texto: "Vencido", clase: "insignia-injustificada" },
+  agotado: { texto: "Agotado", clase: "insignia-inactivo" }
+};
+
+export const ESTADOS_PEDIDO = {
+  pendiente: { texto: "Pendiente", clase: "insignia-pendiente" },
+  despachado: { texto: "Despachado", clase: "insignia-activo" },
+  cancelado: { texto: "Cancelado", clase: "insignia-inactivo" }
+};
+
+export const TIPOS_CLIENTE = {
+  distribuidor: "Distribuidor",
+  supermercado: "Supermercado",
+  tienda: "Tienda",
+  institucional: "Institucional"
+};
+
+export const TIPOS_MOVIMIENTO = {
+  ingreso: { texto: "Ingreso", clase: "insignia-activo" },
+  despacho: { texto: "Despacho", clase: "insignia-justificada" },
+  ajuste: { texto: "Ajuste", clase: "insignia-pendiente" }
+};
+
+// Fecha "YYYY-MM-DD" más n días
+export function sumarDias(fecha, dias) {
+  const [a, m, d] = fecha.split("-").map(Number);
+  const f = new Date(a, m - 1, d + dias);
+  return `${f.getFullYear()}-${dosDigitos(f.getMonth() + 1)}-${dosDigitos(f.getDate())}`;
+}
