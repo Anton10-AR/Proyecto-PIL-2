@@ -23,3 +23,6 @@ dist-ssr/
 # Archivos subidos y respaldos generados por el backend
 pil-backend/uploads/
 pil-backend/respaldos/
+
+# Archivos temporales de Office (bloqueo de documentos abiertos)
+~$*
