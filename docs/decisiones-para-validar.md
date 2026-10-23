@@ -6,7 +6,7 @@
 
 ## Propósito
 
-El sistema se orienta al proceso productivo de leche líquida (documento *PIL-ANDINA-final-v2*): recepción y control de calidad de la leche cruda y cobertura de los puestos críticos de cada etapa. Los módulos de RRHH (personal, asistencia y turnos, permisos y vacaciones, capacitación e indicadores de personal) son el soporte organizacional de ese proceso.
+El sistema se orienta al proceso productivo de leche líquida (documento *PIL-ANDINA-final-v3*): recepción y control de calidad de la leche cruda y cobertura de los puestos críticos de cada etapa. Los módulos de RRHH (personal, asistencia y turnos, permisos y vacaciones, capacitación e indicadores de personal) son el soporte organizacional de ese proceso.
 
 Esas reglas de RRHH vienen de la versión anterior, basada en el documento *10-02-Proyecto_RRHH_PIL_Andina*. Para implementarlas, el equipo de desarrollo tomó **15 decisiones** que el documento no definía; necesitamos que el subgrupo de análisis las confirme o las corrija. Las decisiones D10 a D15 (Evaluación del desempeño y Clima y comunicación) corresponden a módulos que quedan fuera del alcance de esta versión: se validarán cuando esos módulos se incorporen.
 

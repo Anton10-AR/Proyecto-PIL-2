@@ -4,6 +4,8 @@ Texto para actualizar `PIL-ANDINA-final-v2.docx` con el módulo de **Almacén y 
 al prototipo. Hasta ahora el documento lo dejaba como "versión futura". Cada bloque indica la sección, qué hacer
 (reemplazar o agregar) y el texto listo para pegar.
 
+Estos cambios ya están aplicados en `PIL-ANDINA-final-v3.docx`; `PIL-ANDINA-final-v2.docx` queda sin tocar como versión anterior.
+
 Criterio que conviene mantener en todo el documento: el módulo **no es de ventas comerciales**. No hay precios,
 facturación ni cobranzas, que serían un ERP y siguen fuera del alcance. Es el registro de qué lote llega a qué cliente,
 que es lo que pide la etapa 7 y la trazabilidad de la sección 6.2.
@@ -96,6 +98,17 @@ despacho." por:
 > El stock de cada lote se calcula a partir de sus movimientos (recepción, despacho y ajustes con motivo); las
 > devoluciones de clientes se registran por lote y no vuelven al stock.
 
+## 7.2. Organigrama de planta
+
+**Reemplazar** el párrafo que sigue a la Figura 3 por:
+
+> Las áreas resaltadas, Acopio y recepción y Calidad y laboratorio, intervienen en el flujo de recepción y usan el
+> módulo de Recepción y calidad del prototipo. Almacén y despacho, junto con los operarios de envasado de Producción,
+> usa el módulo de Almacén y despacho; la atención de pedidos se ubica en esa misma área.
+
+La figura no incluye el puesto de atención de pedidos: si se rehace el organigrama, conviene agregarlo bajo Almacén y
+despacho.
+
 ## 7.3. Puestos críticos y dotación por turno
 
 **Agregar** debajo de la tabla:
@@ -186,6 +199,21 @@ despacho":
 | Cumplimiento de FEFO | Despachos con los lotes que vencen primero ÷ despachos totales × 100 | Semanal | Sí |
 | Devoluciones | Unidades devueltas ÷ unidades despachadas × 100 | Mensual | Sí |
 | Mermas y bajas | Unidades dadas de baja ÷ unidades recibidas en almacén × 100 | Mensual | Sí |
+
+## 10.2. Plan de implementación gradual
+
+En la tabla, **reemplazar** las actividades de dos fases:
+
+- Fase 2: "Construir los módulos de Recepción y calidad y de Almacén y despacho, y ampliar Personal con etapa y turno."
+- Fase 3: "Agregar indicadores de calidad, despacho y cobertura; probar con datos de ejemplo."
+
+## 10.3. Riesgos y medidas de control
+
+**Agregar** una fila:
+
+| Riesgo | Medida de mitigación |
+|---|---|
+| Producto vencido o rotación incorrecta | Propuesta de lotes por FEFO, alerta de lotes por vencer y motivo obligatorio para apartarse de la propuesta. |
 
 ## 11. Conclusiones
 

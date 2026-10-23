@@ -1,7 +1,7 @@
 # Proyecto PIL 2: proceso productivo de leche líquida (PIL Andina)
 
 Prototipo académico de la materia **Diseño Organizacional y RRHH (SIS303)** de la USFX. Acompaña al documento
-*Propuesta de mejora del proceso de producción de leche líquida* (`docs/PIL-ANDINA-final-v2.docx`).
+*Propuesta de mejora del proceso de producción de leche líquida* (`docs/PIL-ANDINA-final-v3.docx`).
 
 El eje del sistema es el **proceso industrial**. Cubre la recepción y el control de calidad de la leche cruda, que es el
 punto crítico del proceso; el producto terminado, el almacén y el despacho de pedidos por lote (etapas 6 y 7), y la
