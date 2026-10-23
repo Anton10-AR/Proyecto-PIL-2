@@ -120,6 +120,8 @@ router.get("/:id", (req, res) => {
   const items = itemsDe(pedido.id);
   const lotesDespachados = db.prepare(`
     SELECT m.id_lote_producto, -m.cantidad AS cantidad, l.codigo, l.id_producto, l.fecha_vencimiento, p.codigo AS codigo_producto,
+           (SELECT group_concat(d.codigo_lote, ', ') FROM lote_producto_origen o JOIN decisiones_leche d ON d.id_ingreso = o.id_ingreso
+            WHERE o.id_lote_producto = l.id) AS lotes_recepcion,
            COALESCE((SELECT SUM(dv.cantidad) FROM devoluciones dv
                      WHERE dv.id_pedido = m.id_pedido AND dv.id_lote_producto = m.id_lote_producto), 0) AS devuelto
     FROM movimientos_inventario m JOIN lotes_producto l ON l.id = m.id_lote_producto JOIN productos p ON p.id = l.id_producto

@@ -110,6 +110,7 @@ export default function DetalleLote() {
           <p className="subtitulo">{lote.producto} · {lote.presentacion} · elaborado el {fechaCorta(lote.fecha_elaboracion)}</p>
         </div>
         <div className="barra-acciones">
+          <Link to={`/recepcion/trazabilidad?codigo=${lote.codigo}`}>Trazabilidad del lote</Link>
           <Link to="/almacen/lotes">Volver a lotes</Link>
         </div>
       </div>

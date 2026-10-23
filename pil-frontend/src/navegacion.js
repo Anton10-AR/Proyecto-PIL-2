@@ -32,6 +32,7 @@ import LotesProducto from "./components/almacen/LotesProducto";
 import FormularioLote from "./components/almacen/FormularioLote";
 import DetalleLote from "./components/almacen/DetalleLote";
 import CatalogosAlmacen from "./components/almacen/CatalogosAlmacen";
+import IndicadoresAlmacen from "./components/almacen/IndicadoresAlmacen";
 import ListaPedidos from "./components/pedidos/ListaPedidos";
 import FormularioPedido from "./components/pedidos/FormularioPedido";
 import DetallePedido from "./components/pedidos/DetallePedido";
@@ -51,13 +52,15 @@ const CONSULTA_ALMACEN = (u) => u.permisos_almacen?.consultar;
 const ENVASA = (u) => u.permisos_almacen?.envasar;
 const PIDE = (u) => u.permisos_almacen?.pedir;
 const ALMACEN = "Almacén y despacho";
+// La trazabilidad sirve a los dos módulos: recepción rastrea desde la leche (LR-, ING-) y almacén desde el producto (LP-)
+const CONSULTA_TRAZABILIDAD = (u) => CONSULTA_RECEPCION(u) || CONSULTA_ALMACEN(u);
 
 export const MENU = [
   { ruta: "/proceso", grupo: PROCESO, etiqueta: "Panel del proceso", acceso: VE_PROCESO, componente: PanelProceso },
   { ruta: "/recepcion", grupo: PROCESO, etiqueta: "Recepción de leche", acceso: CONSULTA_RECEPCION, componente: BandejaRecepcion },
   { ruta: "/recepcion/nuevo", acceso: REGISTRA_INGRESOS, componente: FormularioIngreso, enMenu: false },
   { ruta: "/recepcion/ingresos/:id", acceso: CONSULTA_RECEPCION, componente: DetalleIngreso, enMenu: false },
-  { ruta: "/recepcion/trazabilidad", grupo: PROCESO, etiqueta: "Trazabilidad de lotes", acceso: CONSULTA_RECEPCION, componente: Trazabilidad },
+  { ruta: "/recepcion/trazabilidad", grupo: PROCESO, etiqueta: "Trazabilidad de lotes", acceso: CONSULTA_TRAZABILIDAD, componente: Trazabilidad },
   { ruta: "/recepcion/indicadores", grupo: PROCESO, etiqueta: "Indicadores de calidad", acceso: CONSULTA_RECEPCION, componente: IndicadoresCalidad },
   { ruta: "/recepcion/catalogos", grupo: PROCESO, etiqueta: "Parámetros y proveedores", acceso: CONSULTA_RECEPCION, componente: Catalogos },
   { ruta: "/proceso/estructura", grupo: PROCESO, etiqueta: "Etapas y puestos", roles: ROLES, componente: EstructuraProceso },
@@ -68,6 +71,7 @@ export const MENU = [
   { ruta: "/pedidos", grupo: ALMACEN, etiqueta: "Pedidos y despacho", acceso: CONSULTA_ALMACEN, componente: ListaPedidos },
   { ruta: "/pedidos/nuevo", acceso: PIDE, componente: FormularioPedido, enMenu: false },
   { ruta: "/pedidos/:id", acceso: CONSULTA_ALMACEN, componente: DetallePedido, enMenu: false },
+  { ruta: "/almacen/indicadores", grupo: ALMACEN, etiqueta: "Indicadores de despacho", acceso: CONSULTA_ALMACEN, componente: IndicadoresAlmacen },
   { ruta: "/almacen/catalogos", grupo: ALMACEN, etiqueta: "Productos y clientes", acceso: CONSULTA_ALMACEN, componente: CatalogosAlmacen },
   { ruta: "/personal", grupo: "Personal", etiqueta: "Personal", roles: ROLES, componente: ListaPersonal },
   { ruta: "/personal/nuevo", roles: ["rrhh"], componente: FormularioTrabajador, enMenu: false },

@@ -6,6 +6,7 @@ import { Link } from "react-router";
 import { useAuth } from "../../contexto/useAuth";
 import { obtenerCobertura, obtenerIndicadoresCobertura } from "../../api/proceso";
 import { obtenerIndicadoresCalidad } from "../../api/recepcion";
+import { obtenerIndicadoresAlmacen } from "../../api/almacen";
 import { ESTADOS_COBERTURA, SITUACIONES, fechaCorta, hoy, miles } from "../../formato";
 
 function Indicador({ valor, sufijo = "", etiqueta, detalle }) {
@@ -30,6 +31,7 @@ export default function PanelProceso() {
   const [cobertura, setCobertura] = useState(null);
   const [indicadores, setIndicadores] = useState(null);
   const [calidad, setCalidad] = useState(null);
+  const [despacho, setDespacho] = useState(null);
   const [mensaje, setMensaje] = useState("");
 
   useEffect(() => {
@@ -44,6 +46,12 @@ export default function PanelProceso() {
       obtenerIndicadoresCalidad({ desde: sumarDias(hoy(), -6), hasta: hoy() }).then(setCalidad).catch(() => {});
     }
   }, [usuario.permisos_recepcion]);
+
+  useEffect(() => {
+    if (usuario.permisos_almacen?.consultar) {
+      obtenerIndicadoresAlmacen({ desde: sumarDias(hoy(), -6), hasta: hoy() }).then(setDespacho).catch(() => {});
+    }
+  }, [usuario.permisos_almacen]);
 
   const etapas = cobertura ? Object.values(cobertura.puestos.reduce((grupos, p) => {
     (grupos[p.id_etapa] ||= { id: p.id_etapa, nombre: p.etapa, puestos: [] }).puestos.push(p);
@@ -108,6 +116,8 @@ export default function PanelProceso() {
               detalle={`${indicadores.personas_capacitacion_vigente} de ${indicadores.personas_puestos_criticos} personas`} />
             {calidad && <Indicador valor={calidad.pct_rechazo} sufijo="%" etiqueta="Leche rechazada (7 días)" detalle={`${miles(calidad.litros_recibidos)} L recibidos`} />}
             {calidad && <Indicador valor={calidad.tiempo_recepcion_min} sufijo=" min" etiqueta="Tiempo de recepción (7 días)" detalle="De la llegada a la decisión" />}
+            {despacho && <Indicador valor={despacho.pct_fefo} sufijo="%" etiqueta="Despachos según FEFO (7 días)" detalle={`${despacho.despachos} despachos · ${despacho.pct_con_lote ?? "—"} % con lote registrado`} />}
+            {despacho && <Indicador valor={despacho.pct_devolucion} sufijo="%" etiqueta="Unidades devueltas (7 días)" detalle={`${miles(despacho.unidades_devueltas)} de ${miles(despacho.unidades_despachadas)} despachadas`} />}
           </div>
           {indicadores.descubiertos.length > 0 && (
             <div className="tabla-contenedor">
@@ -125,6 +135,7 @@ export default function PanelProceso() {
             </div>
           )}
           {calidad && <p><Link to="/recepcion/indicadores">Ver los indicadores de calidad de la recepción</Link></p>}
+          {despacho && <p><Link to="/almacen/indicadores">Ver los indicadores de despacho</Link></p>}
         </section>
       )}
     </div>

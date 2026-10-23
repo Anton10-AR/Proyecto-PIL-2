@@ -8,7 +8,10 @@ const db = require("../db/database");
 const { permitirAccion, permisosAlmacen, notificarPuestos, PUESTOS_ALMACEN } = require("../utils/puestos");
 const { notificarTrabajador } = require("../utils/notificar");
 const { siguienteCodigo } = require("../utils/codigos");
-const { fechaVencimiento, situacionLote, errorRecepcion, despachable } = require("../utils/inventario");
+const {
+  fechaVencimiento, situacionLote, errorRecepcion, despachable, calcularIndicadoresDespacho
+} = require("../utils/inventario");
+const { despachosDeLote } = require("../utils/trazabilidad");
 const { hoyLocal, horaLocal, esFecha, sumarDias } = require("../utils/fechas");
 
 const router = express.Router();
@@ -211,6 +214,92 @@ router.get("/movimientos", (req, res) => {
   if (req.query.id_producto) { sql += " AND l.id_producto = ?"; params.push(req.query.id_producto); }
   sql += " ORDER BY m.fecha_hora DESC, m.id DESC";
   res.json(db.prepare(sql).all(...params));
+});
+
+// Trazabilidad de un lote de producto terminado (LP-...): hacia atrás hasta los proveedores y su análisis,
+// y hacia adelante hasta los pedidos y clientes (documento, sección 6.2)
+// GET /api/almacen/trazabilidad/:codigo
+router.get("/trazabilidad/:codigo", (req, res) => {
+  const codigo = texto(req.params.codigo).toUpperCase();
+  const fila = db.prepare("SELECT id FROM lotes_producto WHERE codigo = ?").get(codigo);
+  if (!fila) return res.status(404).json({ error: `No se encontró un lote de producto terminado con el código ${codigo}` });
+  const lote = obtenerLote(fila.id);
+  const origen = db.prepare(`
+    SELECT i.id, i.codigo, i.volumen_l, i.fecha_hora_llegada, i.fecha_hora_descarga, d.codigo_lote, d.tanque, d.resultado,
+           a.sugerencia, pr.codigo AS codigo_proveedor, pr.nombre AS proveedor, pr.centro_acopio
+    FROM lote_producto_origen o
+    JOIN ingresos_leche i ON i.id = o.id_ingreso
+    JOIN decisiones_leche d ON d.id_ingreso = i.id
+    JOIN analisis_leche a ON a.id_ingreso = i.id
+    JOIN proveedores pr ON pr.id = i.id_proveedor
+    WHERE o.id_lote_producto = ? ORDER BY i.fecha_hora_llegada
+  `).all(lote.id);
+  const devoluciones = db.prepare(`
+    SELECT dv.*, pe.codigo AS codigo_pedido, c.nombre AS cliente FROM devoluciones dv
+    JOIN pedidos pe ON pe.id = dv.id_pedido JOIN clientes c ON c.id = pe.id_cliente
+    WHERE dv.id_lote_producto = ? ORDER BY dv.fecha_hora
+  `).all(lote.id);
+  res.json({ ...lote, origen, despachos: despachosDeLote(lote.id), devoluciones });
+});
+
+// Indicadores de la etapa 7 en el período (por defecto, los últimos 30 días), por cliente y por producto
+// GET /api/almacen/indicadores?desde&hasta
+router.get("/indicadores", (req, res) => {
+  const hasta = esFecha(req.query.hasta) ? req.query.hasta : hoyLocal();
+  const desde = esFecha(req.query.desde) ? req.query.desde : sumarDias(hasta, -29);
+  if (desde > hasta) return res.status(400).json({ error: "La fecha inicial no puede ser posterior a la final" });
+
+  const despachos = db.prepare(`
+    SELECT pe.id, pe.id_cliente, c.nombre AS cliente, c.tipo, d.coincide_fefo,
+           substr(d.fecha_hora, 1, 10) <= pe.fecha_entrega AS a_tiempo,
+           EXISTS (SELECT 1 FROM movimientos_inventario m WHERE m.id_pedido = pe.id) AS con_lote,
+           COALESCE((SELECT -SUM(m.cantidad) FROM movimientos_inventario m WHERE m.id_pedido = pe.id), 0) AS unidades,
+           COALESCE((SELECT SUM(dv.cantidad) FROM devoluciones dv WHERE dv.id_pedido = pe.id), 0) AS devuelto
+    FROM despachos d JOIN pedidos pe ON pe.id = d.id_pedido JOIN clientes c ON c.id = pe.id_cliente
+    WHERE substr(d.fecha_hora, 1, 10) BETWEEN ? AND ?
+  `).all(desde, hasta);
+  const lotesRecibidos = db.prepare(`
+    SELECT unidades, unidades_recibidas FROM lotes_producto WHERE substr(fecha_hora_recepcion, 1, 10) BETWEEN ? AND ?
+  `).all(desde, hasta);
+  const unidadesDevueltas = db.prepare(`
+    SELECT COALESCE(SUM(cantidad), 0) AS total FROM devoluciones WHERE substr(fecha_hora, 1, 10) BETWEEN ? AND ?
+  `).get(desde, hasta).total;
+  const unidadesBaja = db.prepare(`
+    SELECT COALESCE(-SUM(cantidad), 0) AS total FROM movimientos_inventario
+    WHERE tipo = 'ajuste' AND cantidad < 0 AND substr(fecha_hora, 1, 10) BETWEEN ? AND ?
+  `).get(desde, hasta).total;
+
+  // Por cliente: pedidos despachados, unidades, cumplimiento de FEFO y devoluciones
+  const porCliente = Object.values(despachos.reduce((grupos, d) => {
+    const g = grupos[d.id_cliente] ||= { id: d.id_cliente, cliente: d.cliente, tipo: d.tipo, despachos: 0, unidades: 0, fefo: 0, devuelto: 0 };
+    g.despachos++;
+    g.unidades += d.unidades;
+    g.fefo += d.coincide_fefo;
+    g.devuelto += d.devuelto;
+    return grupos;
+  }, {})).sort((a, b) => b.unidades - a.unidades);
+
+  // Por producto: despachado, devuelto y bajas en el período
+  const porProducto = db.prepare(`
+    SELECT p.id, p.codigo, p.nombre,
+      COALESCE((SELECT -SUM(m.cantidad) FROM movimientos_inventario m JOIN lotes_producto l ON l.id = m.id_lote_producto
+                WHERE l.id_producto = p.id AND m.tipo = 'despacho' AND substr(m.fecha_hora, 1, 10) BETWEEN ? AND ?), 0) AS despachado,
+      COALESCE((SELECT SUM(dv.cantidad) FROM devoluciones dv JOIN lotes_producto l ON l.id = dv.id_lote_producto
+                WHERE l.id_producto = p.id AND substr(dv.fecha_hora, 1, 10) BETWEEN ? AND ?), 0) AS devuelto,
+      COALESCE((SELECT -SUM(m.cantidad) FROM movimientos_inventario m JOIN lotes_producto l ON l.id = m.id_lote_producto
+                WHERE l.id_producto = p.id AND m.tipo = 'ajuste' AND m.cantidad < 0 AND substr(m.fecha_hora, 1, 10) BETWEEN ? AND ?), 0) AS baja
+    FROM productos p ORDER BY p.codigo
+  `).all(desde, hasta, desde, hasta, desde, hasta);
+
+  const pendientes = db.prepare("SELECT fecha_entrega FROM pedidos WHERE estado = 'pendiente'").all();
+  res.json({
+    desde, hasta,
+    ...calcularIndicadoresDespacho({ despachos, lotesRecibidos, unidadesDevueltas, unidadesBaja }),
+    pedidos_pendientes: pendientes.length,
+    pedidos_atrasados: pendientes.filter((p) => p.fecha_entrega < hoyLocal()).length,
+    por_cliente: porCliente,
+    por_producto: porProducto
+  });
 });
 
 // --- Lotes de producto terminado (envasado) ---

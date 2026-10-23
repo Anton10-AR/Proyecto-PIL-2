@@ -10,6 +10,7 @@ const {
   evaluarMuestra, describirLimite, RESULTADO_DE_SUGERENCIA, calcularIndicadoresCalidad, porcentaje
 } = require("../utils/recepcion");
 const { siguienteCodigo } = require("../utils/codigos");
+const { destinoDeIngreso } = require("../utils/trazabilidad");
 const { hoyLocal, horaLocal, esFecha, esHora, sumarDias } = require("../utils/fechas");
 
 const router = express.Router();
@@ -186,7 +187,8 @@ router.get("/ingresos/:id", (req, res) => {
   });
 });
 
-// Trazabilidad: busca por código de lote (LR-...) o de ingreso (ING-...)
+// Trazabilidad: busca por código de lote (LR-...) o de ingreso (ING-...). Incluye el destino de la leche:
+// lotes de producto terminado elaborados con ella y los pedidos y clientes a los que se despacharon.
 // GET /api/recepcion/trazabilidad/:codigo
 router.get("/trazabilidad/:codigo", (req, res) => {
   const codigo = texto(req.params.codigo).toUpperCase();
@@ -206,7 +208,8 @@ router.get("/trazabilidad/:codigo", (req, res) => {
   res.json({
     ...ingreso,
     bitacora: [...bitacoraDe("ingreso", ingreso.id), ...bitacoraDe("analisis", ingreso.id)],
-    historial_proveedor: historialProveedor
+    historial_proveedor: historialProveedor,
+    destino: destinoDeIngreso(ingreso.id)
   });
 });
 

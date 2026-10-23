@@ -2,7 +2,7 @@ const { test } = require("node:test");
 const assert = require("node:assert");
 const {
   fechaVencimiento, estaVencido, diasParaVencer, porVencer, situacionLote, errorRecepcion, proponerFEFO, errorAsignacion,
-  coincideConPropuesta
+  coincideConPropuesta, calcularIndicadoresDespacho
 } = require("../src/utils/inventario");
 
 const lote = (id, vencimiento, stock, extra = {}) => ({
@@ -93,4 +93,26 @@ test("errorAsignacion: los lotes elegidos deben cubrir exactamente el pedido", (
   assert.match(errorAsignacion(items, [{ id_lote_producto: 4, cantidad: 80 }, { id_lote_producto: 2, cantidad: 40 }, { id_lote_producto: 3, cantidad: 30 }], lotes, "2026-10-21"), /no se puede despachar/);
   assert.match(errorAsignacion([{ id_producto: 2, cantidad: 30 }], ok, lotes, "2026-10-21"), /no está en el pedido/);
   assert.match(errorAsignacion(items, [{ id_lote_producto: 9, cantidad: 1 }], lotes, "2026-10-21"), /no existe/);
+});
+
+test("indicadores de despacho de la etapa 7", () => {
+  const r = calcularIndicadoresDespacho({
+    despachos: [
+      { coincide_fefo: 1, a_tiempo: true, con_lote: true, unidades: 600 },
+      { coincide_fefo: 1, a_tiempo: true, con_lote: true, unidades: 300 },
+      { coincide_fefo: 0, a_tiempo: false, con_lote: true, unidades: 100 }
+    ],
+    lotesRecibidos: [{ unidades: 1000, unidades_recibidas: 990 }, { unidades: 500, unidades_recibidas: 500 }],
+    unidadesDevueltas: 20,
+    unidadesBaja: 30
+  });
+  assert.strictEqual(r.despachos, 3);
+  assert.strictEqual(r.pct_con_lote, 100);
+  assert.strictEqual(r.pct_fefo, 66.67);
+  assert.strictEqual(r.pct_a_tiempo, 66.67);
+  assert.strictEqual(r.pct_devolucion, 2);
+  assert.strictEqual(r.pct_faltante_recepcion, 0.67);
+  assert.strictEqual(r.pct_merma, 2.01);
+  const vacio = calcularIndicadoresDespacho({ despachos: [], lotesRecibidos: [], unidadesDevueltas: 0, unidadesBaja: 0 });
+  assert.strictEqual(vacio.pct_fefo, null);
 });

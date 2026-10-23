@@ -52,3 +52,11 @@ export function crearCliente(datos) {
 export function actualizarCliente(id, datos) {
   return peticion(`/almacen/clientes/${id}`, { metodo: "PUT", cuerpo: datos });
 }
+
+export function buscarTrazabilidadLote(codigo) {
+  return peticion(`/almacen/trazabilidad/${encodeURIComponent(codigo)}`);
+}
+
+export function obtenerIndicadoresAlmacen({ desde, hasta } = {}) {
+  return peticion(`/almacen/indicadores${consulta({ desde, hasta })}`);
+}

@@ -258,13 +258,14 @@ export default function DetallePedido() {
               </dl>
               <div className="tabla-contenedor">
                 <table>
-                  <thead><tr><th>Lote</th><th>Producto</th><th>Vencimiento</th><th>Despachadas</th><th>Devueltas</th></tr></thead>
+                  <thead><tr><th>Lote</th><th>Producto</th><th>Vencimiento</th><th>Leche de origen</th><th>Despachadas</th><th>Devueltas</th></tr></thead>
                   <tbody>
                     {pedido.lotes_despachados.map((l) => (
                       <tr key={l.id_lote_producto}>
                         <td><Link to={`/almacen/lotes/${l.id_lote_producto}`}>{l.codigo}</Link></td>
                         <td>{l.codigo_producto}</td>
                         <td>{fechaCorta(l.fecha_vencimiento)}</td>
+                        <td>{l.lotes_recepcion}</td>
                         <td>{miles(l.cantidad)}</td>
                         <td className={l.devuelto ? "fuera-norma" : ""}>{miles(l.devuelto)}</td>
                       </tr>

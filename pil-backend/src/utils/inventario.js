@@ -87,6 +87,37 @@ function errorAsignacion(items, elegida, lotes, fecha) {
   return null;
 }
 
+// Con dos decimales: devoluciones y mermas suelen ser fracciones de 1 % que con uno solo se verían como 0
+const porcentaje = (parte, total) => (total ? Math.round((parte / total) * 10000) / 100 : null);
+
+// Indicadores de la etapa 7 (documento, sección 5: despachos con lote registrado y devoluciones), más FEFO,
+// entregas a tiempo, faltantes al recibir y mermas.
+// despachos: [{ coincide_fefo, a_tiempo, con_lote, unidades }]; lotes recibidos: [{ unidades, unidades_recibidas }];
+// unidadesDevueltas y unidadesBaja (ajustes negativos) del período.
+function calcularIndicadoresDespacho({ despachos, lotesRecibidos, unidadesDevueltas, unidadesBaja }) {
+  const unidadesDespachadas = despachos.reduce((s, d) => s + d.unidades, 0);
+  const envasadas = lotesRecibidos.reduce((s, l) => s + l.unidades, 0);
+  const recibidas = lotesRecibidos.reduce((s, l) => s + l.unidades_recibidas, 0);
+  return {
+    despachos: despachos.length,
+    unidades_despachadas: unidadesDespachadas,
+    // Despachos con lote correctamente registrado ÷ despachos totales × 100
+    pct_con_lote: porcentaje(despachos.filter((d) => d.con_lote).length, despachos.length),
+    // Despachos según FEFO (los lotes que vencen primero) ÷ despachos × 100
+    pct_fefo: porcentaje(despachos.filter((d) => d.coincide_fefo).length, despachos.length),
+    // Despachados hasta la fecha de entrega ÷ despachos × 100
+    pct_a_tiempo: porcentaje(despachos.filter((d) => d.a_tiempo).length, despachos.length),
+    // Unidades devueltas por clientes ÷ unidades despachadas × 100
+    unidades_devueltas: unidadesDevueltas,
+    pct_devolucion: porcentaje(unidadesDevueltas, unidadesDespachadas),
+    // Faltantes al recibir en almacén ÷ unidades envasadas × 100
+    pct_faltante_recepcion: porcentaje(envasadas - recibidas, envasadas),
+    // Bajas (merma, vencidos) ÷ unidades recibidas × 100
+    unidades_baja: unidadesBaja,
+    pct_merma: porcentaje(unidadesBaja, recibidas)
+  };
+}
+
 // ¿La asignación elegida usa los mismos lotes y unidades que la propuesta? (el orden no importa)
 function coincideConPropuesta(propuesta, elegida) {
   const aMapa = (lista) => {
@@ -101,5 +132,5 @@ function coincideConPropuesta(propuesta, elegida) {
 
 module.exports = {
   fechaVencimiento, estaVencido, diasParaVencer, porVencer, situacionLote, errorRecepcion, despachable, proponerFEFO,
-  errorAsignacion, coincideConPropuesta
+  errorAsignacion, coincideConPropuesta, calcularIndicadoresDespacho
 };
