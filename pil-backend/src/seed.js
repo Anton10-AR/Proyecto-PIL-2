@@ -54,7 +54,10 @@ const trabajadores = [
   ["Patricia", "Ramos", "4890321", "Operadora de Clarificación", "Producción", "2020-05-18", "Indefinido", "70011123", "pramos@pilandina.bo", 1, "activo"],
   ["Hugo", "Mendoza", "5234789", "Operador de Estandarización", "Producción", "2019-09-02", "Indefinido", "70011124", "hmendoza@pilandina.bo", 1, "activo"],
   ["Ramiro", "Aguilar", "3987654", "Encargado de Almacén", "Logística", "2018-04-23", "Indefinido", "70011125", "raguilar@pilandina.bo", 1, "activo"],
-  ["Teresa", "Huanca", "6678123", "Operadora Térmica", "Producción", "2021-11-08", "Indefinido", "70011126", "thuanca@pilandina.bo", 1, "activo"]
+  ["Teresa", "Huanca", "6678123", "Operadora Térmica", "Producción", "2021-11-08", "Indefinido", "70011126", "thuanca@pilandina.bo", 1, "activo"],
+  // Almacén y despacho (ids 17 y 18)
+  ["Gabriela", "Torrico", "5678234", "Ejecutiva de Atención de Pedidos", "Logística", "2022-10-03", "Indefinido", "70011127", "gtorrico@pilandina.bo", 1, "activo"],
+  ["Wilson", "Cruz", "6789345", "Auxiliar de Despacho", "Logística", "2024-02-12", "Plazo fijo", "70011128", "wcruz@pilandina.bo", 1, "activo"]
 ];
 
 trabajadores.forEach((t) => insertarTrabajador.run(...t));
@@ -65,7 +68,7 @@ const puestosAsignados = {
   1: "supervisor_produccion", 2: "operador_termico", 3: "operario_envasado", 4: "supervisor_calidad",
   5: "analista_laboratorio", 6: "conductor_cisterna", 8: "operador_clarificacion", 10: "operador_recepcion",
   11: "operador_recepcion", 12: "analista_laboratorio", 13: "operador_clarificacion", 14: "operador_estandarizacion",
-  15: "encargado_almacen", 16: "operador_termico"
+  15: "encargado_almacen", 16: "operador_termico", 17: "ejecutivo_pedidos", 18: "auxiliar_despacho"
 };
 const asignarPuesto = db.prepare("UPDATE trabajadores SET id_puesto = (SELECT id FROM puestos_proceso WHERE codigo = ?) WHERE id = ?");
 Object.entries(puestosAsignados).forEach(([id, codigo]) => asignarPuesto.run(codigo, Number(id)));
@@ -90,7 +93,10 @@ const cuentas = [
   [10, "mtorrez", "trabajador", 0],
   [11, "scondori", "trabajador", 0],
   [12, "dflores", "trabajador", 0],
-  [13, "pramos", "trabajador", 0]
+  [13, "pramos", "trabajador", 0],
+  [15, "raguilar", "trabajador", 0],
+  [17, "gtorrico", "trabajador", 0],
+  [18, "wcruz", "trabajador", 0]
 ];
 
 cuentas.forEach(([idTrabajador, usuario, rol, debeCambiar]) => {
@@ -135,7 +141,9 @@ const asignaciones = [
   [8, 1, "2026-01-01", "2026-03-31"],
   // Personal de planta: la recepción de leche se concentra en el turno mañana
   [10, 1, "2026-01-01", null], [11, 1, "2026-01-01", null], [12, 1, "2026-01-01", null], [13, 1, "2026-01-01", null],
-  [14, 1, "2026-01-01", null], [15, 1, "2026-01-01", null], [16, 1, "2026-01-01", null]
+  [14, 1, "2026-01-01", null], [15, 1, "2026-01-01", null], [16, 1, "2026-01-01", null],
+  // Atención de pedidos trabaja en oficina; el despacho, en el turno mañana con el almacén
+  [17, 3, "2026-01-01", null], [18, 1, "2026-01-01", null]
 ];
 const insertarAsignacion = db.prepare(`
   INSERT INTO asignaciones_turno (id_trabajador, id_turno, fecha_desde, fecha_hasta, id_asignado_por)
@@ -497,7 +505,7 @@ let totalAsistencia = 0;
 let totalAusencias = 0;
 for (let dias = 13; dias >= 0; dias--) {
   const fecha = sumarDias(hoy, -dias);
-  [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16].forEach((id) => {
+  [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18].forEach((id) => {
     const { turno, laborable } = jornadaDelDia(id, fecha);
     if (!laborable || solicitudAprobadaEn(id, fecha)) return;
 
@@ -687,6 +695,183 @@ pendientes.forEach((i) => {
     .run(idUsuario, mensaje, `/recepcion/ingresos/${i.id}`);
 });
 
+console.log("Insertando productos, clientes, lotes de producto terminado, pedidos y despachos...");
+const { fechaVencimiento, estaVencido, proponerFEFO } = require("./utils/inventario");
+
+// [codigo, nombre, presentacion, litros_por_unidad, vida_util_dias]
+const productos = [
+  ["P-01", "Leche pasteurizada entera", "Bolsa 900 ml", 0.9, 7],
+  ["P-02", "Leche entera UHT", "Caja 1 L", 1, 120],
+  ["P-03", "Leche deslactosada UHT", "Caja 1 L", 1, 120],
+  ["P-04", "Leche semidescremada UHT", "Caja 1 L", 1, 120]
+];
+const insertarProducto = db.prepare(
+  "INSERT INTO productos (codigo, nombre, presentacion, litros_por_unidad, vida_util_dias) VALUES (?, ?, ?, ?, ?)"
+);
+productos.forEach((p) => insertarProducto.run(...p));
+const PASTEURIZADA = 1;
+
+// [codigo, nombre, tipo, ciudad, direccion, telefono]. El cliente institucional (desayuno escolar) pide más vida útil.
+const clientes = [
+  ["CL-001", "Distribuidora Sucre Norte", "distribuidor", "Sucre", "Av. Jaime Mendoza 1450", "64-41210"],
+  ["CL-002", "Supermercado El Abasto", "supermercado", "Sucre", "Calle Ravelo 120", "64-52233"],
+  ["CL-003", "Tienda Doña Carmen", "tienda", "Sucre", "Mercado Campesino, puesto 34", "71145870"],
+  ["CL-004", "Desayuno Escolar GAM Sucre", "institucional", "Sucre", "Plaza 25 de Mayo s/n", "64-60100"],
+  ["CL-005", "Distribuidora Lácteos Potosí", "distribuidor", "Potosí", "Av. Universitaria 812", "62-24455"],
+  ["CL-006", "Minimarket La Recoleta", "tienda", "Sucre", "Calle Dalence 75", "72290311"]
+];
+const insertarCliente = db.prepare(
+  "INSERT INTO clientes (codigo, nombre, tipo, ciudad, direccion, telefono) VALUES (?, ?, ?, ?, ?, ?)"
+);
+clientes.forEach((c) => insertarCliente.run(...c));
+
+const insertarLote = db.prepare(`
+  INSERT INTO lotes_producto (codigo, id_producto, fecha_elaboracion, fecha_vencimiento, unidades, fecha_hora_registro, id_responsable)
+  VALUES (?, ?, ?, ?, ?, ?, ?)
+`);
+const insertarOrigen = db.prepare("INSERT INTO lote_producto_origen (id_lote_producto, id_ingreso) VALUES (?, ?)");
+const recibirLote = db.prepare(`
+  UPDATE lotes_producto SET estado = 'en_almacen', unidades_recibidas = ?, observacion_recepcion = ?, fecha_hora_recepcion = ?, id_receptor = ?
+  WHERE id = ?
+`);
+const insertarMovimiento = db.prepare(`
+  INSERT INTO movimientos_inventario (id_lote_producto, tipo, cantidad, id_pedido, motivo, fecha_hora, id_trabajador)
+  VALUES (?, ?, ?, ?, ?, ?, ?)
+`);
+const insertarPedido = db.prepare(`
+  INSERT INTO pedidos (codigo, id_cliente, fecha_entrega, observacion, fecha_hora_registro, id_responsable) VALUES (?, ?, ?, ?, ?, ?)
+`);
+const insertarItem = db.prepare("INSERT INTO pedido_items (id_pedido, id_producto, cantidad) VALUES (?, ?, ?)");
+const insertarDespacho = db.prepare(`
+  INSERT INTO despachos (id_pedido, fecha_hora, coincide_fefo, motivo, vehiculo, id_despachador) VALUES (?, ?, ?, ?, ?, ?)
+`);
+const lotesConStock = db.prepare(`
+  SELECT l.*, COALESCE(SUM(m.cantidad), 0) AS stock FROM lotes_producto l
+  LEFT JOIN movimientos_inventario m ON m.id_lote_producto = l.id
+  WHERE l.id_producto = ? GROUP BY l.id
+`);
+const aceptadosDelDia = db.prepare(`
+  SELECT i.id, i.volumen_l FROM ingresos_leche i JOIN decisiones_leche d ON d.id_ingreso = i.id
+  WHERE d.resultado = 'aceptado' AND i.fecha_hora_descarga IS NOT NULL AND substr(i.fecha_hora_llegada, 1, 10) = ?
+  ORDER BY i.id
+`);
+const disponible = (idProducto, fecha) => lotesConStock.all(idProducto)
+  .filter((l) => l.estado === "en_almacen" && l.stock > 0 && !estaVencido(l, fecha))
+  .reduce((suma, l) => suma + l.stock, 0);
+const redondear100 = (n) => Math.floor(n / 100) * 100;
+
+// Trabajadores: 3 María (envasado), 15 Ramiro (almacén), 17 Gabriela (pedidos), 18 Wilson (despacho)
+const ENVASADO = 3, ALMACEN = 15, PEDIDOS = 17, DESPACHO = 18;
+let totalLotesPT = 0, totalPedidos = 0, totalDespachos = 0;
+let fefoOmitido = false, devolucionHecha = false, cancelacionHecha = false, mermaHecha = false;
+
+diasRecepcion.forEach((fecha, indice) => {
+  const esHoy = fecha === ultimoDia;
+
+  // 1) Antes de abrir: el almacén da de baja lo que venció con stock (la leche pasteurizada dura 7 días)
+  productos.forEach((_, i) => lotesConStock.all(i + 1)
+    .filter((l) => l.estado === "en_almacen" && l.stock > 0 && estaVencido(l, fecha))
+    .forEach((l) => insertarMovimiento.run(l.id, "ajuste", -l.stock, null, "Baja por vencimiento", `${fecha} 07:30`, ALMACEN)));
+
+  // 2) Pedidos de la mañana, armados con el stock disponible. Se despachan a las 11:00 por FEFO; los de hoy siguen pendientes.
+  const pasteurizada = disponible(PASTEURIZADA, fecha);
+  const uht = 2 + (indice % 3); // P-02, P-03 o P-04 según el día
+  const pedidosDelDia = [
+    { cliente: (indice % 3) + 1, items: [[PASTEURIZADA, redondear100(pasteurizada * 0.5)], [2, redondear100(disponible(2, fecha) * 0.35)]], hora: "09:05" },
+    { cliente: indice % 2 ? 4 : 5, items: [[PASTEURIZADA, redondear100(pasteurizada * 0.35)], [uht, redondear100(disponible(uht, fecha) * 0.4)]], hora: "09:40" }
+  ];
+  if (!cancelacionHecha && indice === 3) pedidosDelDia.push({ cliente: 3, items: [[2, 120]], hora: "10:10", cancelar: true });
+
+  pedidosDelDia.forEach((p, n) => {
+    const items = p.items.filter(([idProducto, cantidad]) => cantidad > 0 && disponible(idProducto, fecha) >= cantidad);
+    if (!items.length) return;
+    const codigo = codigoCorrelativo("PED", fecha, n + 1);
+    const entrega = esHoy && n === 1 ? sumarDias(fecha, 1) : fecha;
+    const idPedido = insertarPedido.run(codigo, p.cliente, entrega, p.cliente === 4 ? "Entrega en el almacén municipal" : null,
+      `${fecha} ${p.hora}`, PEDIDOS).lastInsertRowid;
+    items.forEach(([idProducto, cantidad]) => insertarItem.run(idPedido, idProducto, cantidad));
+    totalPedidos++;
+
+    if (p.cancelar) {
+      db.prepare("UPDATE pedidos SET estado = 'cancelado', motivo_cancelacion = ?, fecha_hora_cancelacion = ? WHERE id = ?")
+        .run("El cliente reprogramó su compra para la próxima semana", `${fecha} 10:30`, idPedido);
+      cancelacionHecha = true;
+      return;
+    }
+    if (esHoy) return;
+
+    // El cliente institucional pide más vida útil: una vez se despachan los lotes más nuevos (se aparta de FEFO, con motivo)
+    const omitir = !fefoOmitido && p.cliente === 4;
+    const horaDespacho = `${fecha} 11:${n === 0 ? "00" : "20"}`;
+    items.forEach(([idProducto, cantidad]) => {
+      let asignacion = proponerFEFO(lotesConStock.all(idProducto), cantidad, fecha).asignacion;
+      if (omitir && idProducto === PASTEURIZADA) {
+        const nuevos = lotesConStock.all(idProducto).filter((l) => l.estado === "en_almacen" && l.stock > 0 && !estaVencido(l, fecha))
+          .sort((a, b) => b.fecha_vencimiento.localeCompare(a.fecha_vencimiento));
+        asignacion = [];
+        let restante = cantidad;
+        nuevos.forEach((l) => {
+          const toma = Math.min(l.stock, restante);
+          if (toma > 0) asignacion.push({ id_lote_producto: l.id, cantidad: toma });
+          restante -= toma;
+        });
+      }
+      asignacion.forEach((a) => insertarMovimiento.run(a.id_lote_producto, "despacho", -a.cantidad, idPedido, null, horaDespacho, DESPACHO));
+    });
+    insertarDespacho.run(idPedido, horaDespacho, omitir ? 0 : 1,
+      omitir ? "El desayuno escolar exige al menos 5 días de vida útil al recibir: se despachan los lotes más recientes" : null,
+      n === 0 ? "3310-LMB" : "2190-KDT", DESPACHO);
+    db.prepare("UPDATE pedidos SET estado = 'despachado' WHERE id = ?").run(idPedido);
+    if (omitir) fefoOmitido = true;
+    totalDespachos++;
+
+    // Una devolución al día siguiente: envases dañados en el transporte
+    if (!devolucionHecha && indice >= 4 && n === 0) {
+      const mov = db.prepare("SELECT id_lote_producto FROM movimientos_inventario WHERE id_pedido = ? ORDER BY id LIMIT 1").get(idPedido);
+      db.prepare(`INSERT INTO devoluciones (id_pedido, id_lote_producto, cantidad, motivo, fecha_hora, id_trabajador)
+        VALUES (?, ?, ?, ?, ?, ?)`).run(idPedido, mov.id_lote_producto, 36, "Bolsas rotas en el transporte; el cliente las devolvió",
+        `${sumarDias(fecha, 1)} 10:15`, ALMACEN);
+      devolucionHecha = true;
+    }
+  });
+
+  // 3) Producción del día: envasado registra los lotes con su origen y el almacén los recibe por la tarde.
+  //    La pasteurizada sale del primer ingreso aceptado y la UHT de los demás. El lote de hoy espera recepción.
+  const aceptados = aceptadosDelDia.all(fecha);
+  if (!aceptados.length) return;
+  const lotesDelDia = [[PASTEURIZADA, aceptados.slice(0, 1)]];
+  if (aceptados.length > 1) lotesDelDia.push([uht, aceptados.slice(1)]);
+  lotesDelDia.forEach(([idProducto, origen], n) => {
+    const [, , , litros, vida] = productos[idProducto - 1];
+    const unidades = Math.floor((origen.reduce((s, i) => s + i.volumen_l, 0) * 0.97) / litros / 10) * 10;
+    const codigo = codigoCorrelativo("LP", fecha, n + 1);
+    const idLote = insertarLote.run(codigo, idProducto, fecha, fechaVencimiento(fecha, vida), unidades,
+      `${fecha} ${esHoy ? "11:30" : "13:10"}`, ENVASADO).lastInsertRowid;
+    origen.forEach((i) => insertarOrigen.run(idLote, i.id));
+    totalLotesPT++;
+    if (esHoy) return;
+
+    // Un lote llega con faltante: queda la diferencia y su observación
+    const faltante = !mermaHecha && indice === 6 && idProducto !== PASTEURIZADA ? 24 : 0;
+    recibirLote.run(unidades - faltante, faltante ? "Faltan 24 cajas: llegaron aplastadas desde la línea de envasado" : null,
+      `${fecha} 13:40`, ALMACEN, idLote);
+    insertarMovimiento.run(idLote, "ingreso", unidades - faltante, null, null, `${fecha} 13:40`, ALMACEN);
+    if (faltante) {
+      insertarMovimiento.run(idLote, "ajuste", -12, null, "Merma: cajas dañadas al estibar en cámara", `${fecha} 16:00`, ALMACEN);
+      mermaHecha = true;
+    }
+  });
+});
+
+// Avisos pendientes: el almacén tiene un lote por recibir y pedidos por despachar
+const USUARIO_ALMACEN = 13, USUARIO_DESPACHO = 15;
+const notificarAlmacen = db.prepare("INSERT INTO notificaciones (id_usuario, tipo, mensaje, enlace) VALUES (?, 'almacen', ?, ?)");
+db.prepare("SELECT id, codigo FROM lotes_producto WHERE estado = 'registrado'").all()
+  .forEach((l) => notificarAlmacen.run(USUARIO_ALMACEN, `Lote ${l.codigo} envasado: falta recibirlo en almacén.`, `/almacen/lotes/${l.id}`));
+db.prepare("SELECT id, codigo FROM pedidos WHERE estado = 'pendiente'").all().forEach((p) => {
+  [USUARIO_ALMACEN, USUARIO_DESPACHO].forEach((u) => notificarAlmacen.run(u, `Nuevo pedido ${p.codigo} por despachar.`, `/pedidos/${p.id}`));
+});
+
 console.log("Listo. Datos de ejemplo cargados:");
 console.log(`- ${trabajadores.length} trabajadores (1 inactivo), ${Object.keys(puestosAsignados).length} con puesto en el proceso`);
 console.log(`- ${cuentas.length} cuentas de usuario. Contraseña inicial = CI del trabajador:`);
@@ -699,4 +884,5 @@ console.log(`- ${tiposPermiso.length} tipos de permiso y ${solicitudes.length} s
 console.log(`- ${capacitaciones.length} capacitaciones (finalizadas, en curso, programadas y una cancelada)`);
 console.log(`- ${plantillas.length} plantillas de evaluación, 2 períodos (uno cerrado) y ${evaluaciones.length} evaluaciones`);
 console.log(`- Recepción: ${proveedores.length} proveedores, ${cisternas.length} cisternas, 4 tanques y ${totalIngresos} ingresos de leche (${pendientes.length} pendientes)`);
+console.log(`- Almacén y despacho: ${productos.length} productos, ${clientes.length} clientes, ${totalLotesPT} lotes de producto terminado, ${totalPedidos} pedidos (${totalDespachos} despachados)`);
 console.log(`- ${comunicados.length} comunicados, ${encuestas.length} encuestas y ${sugerencias.length} sugerencias (códigos anónimos de ejemplo: DEMO2026, SUGE7K4P)`);

@@ -45,7 +45,16 @@ const TABLAS = [
   "ingresos_leche",
   "analisis_leche",
   "decisiones_leche",
-  "bitacora_recepcion"
+  "bitacora_recepcion",
+  "productos",
+  "clientes",
+  "lotes_producto",
+  "lote_producto_origen",
+  "pedidos",
+  "pedido_items",
+  "despachos",
+  "movimientos_inventario",
+  "devoluciones"
 ];
 
 function crearEsquema(db) {
@@ -59,7 +68,7 @@ function crearEsquema(db) {
       descripcion TEXT
     );
 
-    -- codigo es fijo y lo usa el backend para los permisos del módulo de Recepción (utils/puestos.js)
+    -- codigo es fijo y lo usa el backend para los permisos de los módulos del proceso (utils/puestos.js)
     CREATE TABLE IF NOT EXISTS puestos_proceso (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       codigo TEXT NOT NULL UNIQUE,
@@ -617,6 +626,152 @@ function crearEsquema(db) {
       FOREIGN KEY (id_usuario) REFERENCES usuarios(id)
     );
     CREATE INDEX IF NOT EXISTS idx_bitacora_registro ON bitacora_recepcion(entidad, id_registro);
+
+    -- ===== Producto terminado, almacén y despacho (etapas 6 y 7) =====
+    -- Sin precios ni facturación: el sistema registra qué lote llegó a qué cliente (trazabilidad), no la venta.
+    CREATE TABLE IF NOT EXISTS productos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      codigo TEXT NOT NULL UNIQUE,
+      nombre TEXT NOT NULL,
+      presentacion TEXT NOT NULL,
+      litros_por_unidad REAL NOT NULL CHECK (litros_por_unidad > 0),
+      vida_util_dias INTEGER NOT NULL CHECK (vida_util_dias > 0),
+      activo INTEGER NOT NULL DEFAULT 1 CHECK (activo IN (0, 1))
+    );
+
+    -- Catálogo de clientes: no tienen cuenta en el sistema, los pedidos los registra atención de pedidos
+    CREATE TABLE IF NOT EXISTS clientes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      codigo TEXT NOT NULL UNIQUE,
+      nombre TEXT NOT NULL,
+      tipo TEXT NOT NULL CHECK (tipo IN ('distribuidor', 'supermercado', 'tienda', 'institucional')),
+      ciudad TEXT,
+      direccion TEXT,
+      telefono TEXT,
+      activo INTEGER NOT NULL DEFAULT 1 CHECK (activo IN (0, 1))
+    );
+
+    -- Lote de producto terminado (LP-AAAAMMDD-NN). Lo registra envasado (etapa 6) y queda 'registrado' hasta que
+    -- el encargado de almacén lo recibe y confirma las unidades: recién entonces entra al inventario (etapa 7).
+    -- fecha_vencimiento = fecha_elaboracion + vida útil del producto.
+    CREATE TABLE IF NOT EXISTS lotes_producto (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      codigo TEXT NOT NULL UNIQUE,
+      id_producto INTEGER NOT NULL,
+      fecha_elaboracion TEXT NOT NULL,
+      fecha_vencimiento TEXT NOT NULL,
+      unidades INTEGER NOT NULL CHECK (unidades > 0),
+      estado TEXT NOT NULL DEFAULT 'registrado' CHECK (estado IN ('registrado', 'en_almacen')),
+      observacion TEXT,
+      fecha_hora_registro TEXT NOT NULL,
+      id_responsable INTEGER NOT NULL,
+      unidades_recibidas INTEGER,
+      observacion_recepcion TEXT,
+      fecha_hora_recepcion TEXT,
+      id_receptor INTEGER,
+      CHECK (fecha_vencimiento > fecha_elaboracion),
+      CHECK ((estado = 'en_almacen') = (fecha_hora_recepcion IS NOT NULL)),
+      CHECK ((estado = 'en_almacen') = (unidades_recibidas IS NOT NULL)),
+      CHECK ((estado = 'en_almacen') = (id_receptor IS NOT NULL)),
+      CHECK (unidades_recibidas IS NULL OR unidades_recibidas BETWEEN 0 AND unidades),
+      CHECK (unidades_recibidas IS NULL OR unidades_recibidas = unidades OR observacion_recepcion IS NOT NULL),
+      FOREIGN KEY (id_producto) REFERENCES productos(id),
+      FOREIGN KEY (id_responsable) REFERENCES trabajadores(id),
+      FOREIGN KEY (id_receptor) REFERENCES trabajadores(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_lotes_producto_vencimiento ON lotes_producto(id_producto, fecha_vencimiento);
+
+    -- Lotes de recepción de los que sale cada lote de producto terminado (solo leche aceptada y descargada):
+    -- es el eslabón lote de recepción -> lote de producto terminado de la cadena de trazabilidad
+    CREATE TABLE IF NOT EXISTS lote_producto_origen (
+      id_lote_producto INTEGER NOT NULL,
+      id_ingreso INTEGER NOT NULL,
+      PRIMARY KEY (id_lote_producto, id_ingreso),
+      FOREIGN KEY (id_lote_producto) REFERENCES lotes_producto(id),
+      FOREIGN KEY (id_ingreso) REFERENCES ingresos_leche(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_origen_ingreso ON lote_producto_origen(id_ingreso);
+
+    -- Pedido de un cliente (PED-AAAAMMDD-NN), solo con cantidades. estado: pendiente -> despachado | cancelado.
+    -- Se despacha completo en un solo despacho; si no hay stock suficiente, sigue pendiente.
+    CREATE TABLE IF NOT EXISTS pedidos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      codigo TEXT NOT NULL UNIQUE,
+      id_cliente INTEGER NOT NULL,
+      fecha_entrega TEXT NOT NULL,
+      observacion TEXT,
+      estado TEXT NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('pendiente', 'despachado', 'cancelado')),
+      fecha_hora_registro TEXT NOT NULL,
+      id_responsable INTEGER NOT NULL,
+      motivo_cancelacion TEXT,
+      fecha_hora_cancelacion TEXT,
+      CHECK ((estado = 'cancelado') = (motivo_cancelacion IS NOT NULL)),
+      CHECK ((estado = 'cancelado') = (fecha_hora_cancelacion IS NOT NULL)),
+      FOREIGN KEY (id_cliente) REFERENCES clientes(id),
+      FOREIGN KEY (id_responsable) REFERENCES trabajadores(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_pedidos_entrega ON pedidos(fecha_entrega);
+
+    CREATE TABLE IF NOT EXISTS pedido_items (
+      id_pedido INTEGER NOT NULL,
+      id_producto INTEGER NOT NULL,
+      cantidad INTEGER NOT NULL CHECK (cantidad > 0),
+      PRIMARY KEY (id_pedido, id_producto),
+      FOREIGN KEY (id_pedido) REFERENCES pedidos(id),
+      FOREIGN KEY (id_producto) REFERENCES productos(id)
+    );
+
+    -- Despacho de un pedido (uno por pedido, no se modifica). Los lotes y unidades despachados son los
+    -- movimientos de tipo 'despacho' del pedido. coincide_fefo = 0 si los lotes no son los que propuso el
+    -- sistema (vence primero, sale primero): exige motivo, igual que apartarse de la sugerencia en recepción.
+    CREATE TABLE IF NOT EXISTS despachos (
+      id_pedido INTEGER PRIMARY KEY,
+      fecha_hora TEXT NOT NULL,
+      coincide_fefo INTEGER NOT NULL CHECK (coincide_fefo IN (0, 1)),
+      motivo TEXT,
+      vehiculo TEXT,
+      id_despachador INTEGER NOT NULL,
+      CHECK (coincide_fefo = 1 OR motivo IS NOT NULL),
+      FOREIGN KEY (id_pedido) REFERENCES pedidos(id),
+      FOREIGN KEY (id_despachador) REFERENCES trabajadores(id)
+    );
+
+    -- El stock de cada lote es la suma de sus movimientos (no se guarda aparte).
+    -- ingreso (+, al recibir en almacén), despacho (-, ligado a un pedido), ajuste (+/-, con motivo: merma, vencido).
+    CREATE TABLE IF NOT EXISTS movimientos_inventario (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id_lote_producto INTEGER NOT NULL,
+      tipo TEXT NOT NULL CHECK (tipo IN ('ingreso', 'despacho', 'ajuste')),
+      cantidad INTEGER NOT NULL CHECK (cantidad <> 0),
+      id_pedido INTEGER,
+      motivo TEXT,
+      fecha_hora TEXT NOT NULL,
+      id_trabajador INTEGER NOT NULL,
+      CHECK (tipo <> 'ingreso' OR cantidad > 0),
+      CHECK (tipo <> 'despacho' OR cantidad < 0),
+      CHECK ((tipo = 'despacho') = (id_pedido IS NOT NULL)),
+      CHECK (tipo <> 'ajuste' OR motivo IS NOT NULL),
+      FOREIGN KEY (id_lote_producto) REFERENCES lotes_producto(id),
+      FOREIGN KEY (id_pedido) REFERENCES pedidos(id),
+      FOREIGN KEY (id_trabajador) REFERENCES trabajadores(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_movimientos_lote ON movimientos_inventario(id_lote_producto);
+    CREATE INDEX IF NOT EXISTS idx_movimientos_pedido ON movimientos_inventario(id_pedido);
+
+    -- Devolución de un cliente, por lote despachado y con motivo. El producto devuelto no vuelve al stock
+    -- (se retira por inocuidad): la devolución es un registro para la trazabilidad y el indicador de la etapa 7.
+    CREATE TABLE IF NOT EXISTS devoluciones (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id_pedido INTEGER NOT NULL,
+      id_lote_producto INTEGER NOT NULL,
+      cantidad INTEGER NOT NULL CHECK (cantidad > 0),
+      motivo TEXT NOT NULL,
+      fecha_hora TEXT NOT NULL,
+      id_trabajador INTEGER NOT NULL,
+      FOREIGN KEY (id_pedido) REFERENCES pedidos(id),
+      FOREIGN KEY (id_lote_producto) REFERENCES lotes_producto(id),
+      FOREIGN KEY (id_trabajador) REFERENCES trabajadores(id)
+    );
   `);
 
   // Valores de configuración por defecto (no pisa los que ya existan)
@@ -669,6 +824,7 @@ const PUESTOS = [
   ["inspector_linea", "Inspector de línea", 6, 0, 0, "Inspección de sellado y codificación"],
   ["encargado_almacen", "Encargado de almacén", 7, 1, 1, "Control de lotes y rotación FEFO"],
   ["auxiliar_despacho", "Auxiliar de despacho", 7, 0, 0, "Preparación de pedidos por lote"],
+  ["ejecutivo_pedidos", "Ejecutivo de atención de pedidos", 7, 0, 0, "Registro de pedidos de clientes y coordinación de entregas"],
   ["supervisor_produccion", "Supervisor de producción", null, 0, 0, "Liberación de leche a proceso y control de etapas 3 a 6"],
   ["tecnico_mantenimiento", "Técnico de mantenimiento", null, 0, 0, "Mantenimiento preventivo de equipos"],
   ["jefatura_planta", "Jefatura de planta", null, 0, 0, "Dirección de planta y rastreo de lotes"]
